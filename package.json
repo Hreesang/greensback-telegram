@@ -1,5 +1,5 @@
 {
-  "name": "telegram-autopm-bot",
+  "name": "greenbacks-telegram",
   "version": "1.0.0",
   "description": "",
   "main": "build/app.js",
@@ -17,14 +17,13 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^18.7.2",
-    "dotenv": "^16.0.1",
     "nodemon": "^2.0.19",
     "prettier": "^2.7.1",
     "tsc-alias": "^1.7.0",
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "input": "^1.0.1",
+    "dotenv": "^16.0.1",
     "telegram": "^2.10.7"
   }
 }
