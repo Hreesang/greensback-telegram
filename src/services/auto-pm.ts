@@ -7,23 +7,16 @@ export const processAutoPM = async (event: NewMessageEvent) => {
   const client = event.client;
   const messageEvent = event.message;
 
-  try {
-    const group = await messageEvent.getChat();
+  const sendMessage = async (message: string) => {
+    try {
+      const group = await messageEvent.getChat();
 
-    if (client && group) {
-      await client.getParticipants(group);
+      if (client && group) {
+        await client.getParticipants(group);
 
-      const sender = (await messageEvent.getSender()) as Api.User;
-      let sentPMs = 0;
+        const sender = (await messageEvent.getSender()) as Api.User;
+        await client.sendMessage(sender, { message });
 
-      for (const [keyword, message] of Object.entries(keywords)) {
-        if (messageEvent.message.match(keyword)) {
-          await client.sendMessage(sender, { message });
-          sentPMs++;
-        }
-      }
-
-      if (sentPMs > 0) {
         let senderName: string;
 
         if (sender.username) {
@@ -34,14 +27,16 @@ export const processAutoPM = async (event: NewMessageEvent) => {
           senderName = getDisplayName(sender);
         }
 
-        if (sentPMs === 1) {
-          console.log(`An auto PM has been sent to ${senderName}.`);
-        } else {
-          console.log(`${sentPMs} auto PMs have been sent to ${senderName}.`);
-        }
+        console.log(`An auto PM has been sent to ${senderName}.`);
       }
+    } catch (e) {
+      console.log(e);
     }
-  } catch (e) {
-    console.log(e);
+  };
+
+  for (const [keyword, message] of Object.entries(keywords)) {
+    if (messageEvent.message.match(keyword)) {
+      await sendMessage(message);
+    }
   }
 };
