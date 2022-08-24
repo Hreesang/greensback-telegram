@@ -84,6 +84,7 @@ class AutoPM {
         }
       }
     }
+    return sender;
   };
 
   public onEvent = async (event: NewMessageEvent) => {
@@ -107,7 +108,7 @@ class AutoPM {
       }
       console.log('passed group check');
 
-      const sender = await this.getSender(message, chat);
+      let sender = await this.getSender(message, chat);
       if (!sender) {
         throw new Error("Can't get the message sender.");
       }
@@ -119,7 +120,13 @@ class AutoPM {
       }
       console.log('passed client check');
 
-      await this.sendMessage(message, client, chat, sender, keyword.text);
+      sender = await this.sendMessage(
+        message,
+        client,
+        chat,
+        sender,
+        keyword.text
+      );
 
       const senderName = this.getSenderName(sender);
       console.log(`An auto PM (${keyword.key}) has sent to ${senderName}.`);
