@@ -1,42 +1,111 @@
-import { NewMessageEvent } from 'telegram/events';
-import keywords from '@/config/auto-pm-keywords.json';
-import { getDisplayName } from 'telegram/Utils';
 import { Api } from 'telegram';
+import { NewMessageEvent } from 'telegram/events';
+import { Entity } from 'telegram/define';
+import { getDisplayName } from 'telegram/Utils';
+import keywords from '@/config/auto-pm-keywords.json';
 
-export const processAutoPM = async (event: NewMessageEvent) => {
-  const client = event.client;
-  const messageEvent = event.message;
-
-  const sendMessage = async (message: string) => {
-    try {
-      const group = await messageEvent.getChat();
-
-      if (client && group) {
-        await client.getParticipants(group);
-
-        const sender = (await messageEvent.getSender()) as Api.User;
-        await client.sendMessage(sender, { message });
-
-        let senderName: string;
-
-        if (sender.username) {
-          senderName = '@' + sender.username;
-        } else if (sender.phone) {
-          senderName = `${getDisplayName(sender)} (+${sender.phone})`;
-        } else {
-          senderName = getDisplayName(sender);
-        }
-
-        console.log(`An auto PM has been sent to ${senderName}.`);
+class AutoPM {
+  private hasKeyword = (text: string) => {
+    for (const [keyword, message] of Object.entries(keywords)) {
+      if (text.match(keyword)) {
+        return {
+          key: keyword,
+          text: message,
+        };
       }
-    } catch (e) {
-      console.log(e);
     }
+    return undefined;
   };
 
-  for (const [keyword, message] of Object.entries(keywords)) {
-    if (messageEvent.message.match(keyword)) {
-      await sendMessage(message);
+  private getSender = async (message: Api.Message, chat: Entity) => {
+    try {
+      let sender = (
+        message.sender ? message.sender : await message.getSender()
+      ) as Api.User;
+      if (!sender) {
+        const client = message.client;
+        await client?.getParticipants(chat);
+
+        sender = (
+          message.sender ? message.sender : await message.getSender()
+        ) as Api.User;
+      }
+      return sender;
+    } catch (e) {
+      throw e;
     }
-  }
-};
+    return undefined;
+  };
+
+  private getSenderName = (sender: Api.User) => {
+    let senderName: string;
+
+    if (sender.username) {
+      senderName = '@' + sender.username;
+    } else if (sender.phone) {
+      senderName = `${getDisplayName(sender)} (+${sender.phone})`;
+    } else {
+      senderName = getDisplayName(sender);
+    }
+
+    return senderName;
+  };
+
+  public onEvent = async (event: NewMessageEvent) => {
+    const message = event.message;
+    const text = message.message;
+
+    const keyword = this.hasKeyword(text);
+    if (!keyword) {
+      return;
+    }
+    console.log('passed keyword check');
+
+    try {
+      const chat = message.chat ? message.chat : await message.getChat();
+      if (!chat) {
+        if (message.isGroup) {
+          throw new Error("Can't find the group message chat.");
+        }
+
+        return;
+      }
+      console.log('passed group check');
+
+      const sender = await this.getSender(message, chat);
+      if (!sender) {
+        throw new Error("Can't get the message sender.");
+      }
+      console.log('passed sender check');
+
+      const client = message.client;
+      if (!client) {
+        throw new Error("Can't get the message client.");
+      }
+      console.log('passed client check');
+
+      try {
+        await client.sendMessage(sender, { message: keyword.text });
+      } catch {
+        try {
+          await client.getDialogs();
+          await client.sendMessage(sender, { message: keyword.text });
+        } catch {
+          await client.getParticipants(chat);
+          await client.sendMessage(sender, { message: keyword.text });
+        }
+      }
+
+      const senderName = this.getSenderName(sender);
+      console.log(`An auto PM (${keyword.key}) has sent to ${senderName}.`);
+    } catch (error: any) {
+      if (error.message) {
+        console.log(new Error(error.message));
+      } else {
+        console.log(error);
+      }
+    }
+  };
+}
+
+export default AutoPM;

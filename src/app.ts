@@ -43,6 +43,7 @@ const client = new TelegramClient(stringSession, apiId, apiHash, {});
     });
 
     console.log('You should now be connected!');
+    await client.getDialogs();
 
     const generatedSession = `${client.session.save()}`;
     if (generatedSession !== session) {

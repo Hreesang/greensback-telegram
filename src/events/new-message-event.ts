@@ -1,6 +1,10 @@
 import { NewMessageEvent } from 'telegram/events';
-import { processAutoPM } from '@/services/auto-pm';
+
+// services
+import AutoPM from '@/services/auto-pm';
+
+const autoPM = new AutoPM();
 
 export const newMessageHandler = (event: NewMessageEvent) => {
-  processAutoPM(event);
+  autoPM.onEvent(event);
 };
