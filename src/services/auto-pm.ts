@@ -52,6 +52,7 @@ class AutoPM {
   };
 
   private sendMessage = async (
+    message: Api.Message,
     client: TelegramClient,
     chat: Entity,
     sender: Api.User,
@@ -63,11 +64,15 @@ class AutoPM {
       try {
         console.log('error! caching from getParticipants...');
         await client.getParticipants(chat);
+
+        sender = (await message.getSender()) as Api.User;
         await client.sendMessage(sender, { message: text });
       } catch {
         try {
-          console.log('caching from getDialogs...');
+          console.log('error! caching from getDialogs...');
           await client.getDialogs();
+
+          sender = (await message.getSender()) as Api.User;
           await client.sendMessage(sender, { message: text });
         } catch (e: any) {
           const senderName = this.getSenderName(sender);
@@ -114,7 +119,7 @@ class AutoPM {
       }
       console.log('passed client check');
 
-      await this.sendMessage(client, chat, sender, keyword.text);
+      await this.sendMessage(message, client, chat, sender, keyword.text);
 
       const senderName = this.getSenderName(sender);
       console.log(`An auto PM (${keyword.key}) has sent to ${senderName}.`);
