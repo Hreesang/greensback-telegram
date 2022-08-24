@@ -69,8 +69,13 @@ class AutoPM {
           console.log('error! caching from getParticipants...');
           await client.getParticipants(chat);
           await client.sendMessage(sender, { message: text });
-        } catch {
-          throw new Error("Can't send a direct message to the sender.");
+        } catch (e: any) {
+          const senderName = this.getSenderName(sender);
+          let errMessage = e.message ? (e.message as string) : '';
+
+          throw new Error(
+            `Can't send a direct message to sender: ${senderName}.\n${errMessage}`
+          );
         }
       }
     }
