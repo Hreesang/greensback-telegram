@@ -17,12 +17,20 @@ class AutoPM {
     return undefined;
   };
 
-  private getSender = async (message: Api.Message, chat: Entity) => {
+  private getSender = async (
+    message: Api.Message,
+    chat: Entity,
+    forceGetParticipants?: boolean
+  ) => {
+    if (forceGetParticipants == undefined) {
+      forceGetParticipants = false;
+    }
+
     try {
       let sender = (
         message.sender ? message.sender : await message.getSender()
       ) as Api.User;
-      if (!sender) {
+      if (!sender || forceGetParticipants) {
         const client = message.client;
         await client?.getParticipants(chat);
 
@@ -63,9 +71,7 @@ class AutoPM {
     } catch {
       try {
         console.log('error! caching from getParticipants...');
-        await client.getParticipants(chat);
-
-        sender = (await message.getSender()) as Api.User;
+        sender = (await this.getSender(message, chat, true)) as Api.User;
         await client.sendMessage(sender, { message: text });
       } catch {
         try {
