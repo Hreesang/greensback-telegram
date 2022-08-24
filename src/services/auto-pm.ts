@@ -61,13 +61,13 @@ class AutoPM {
       await client.sendMessage(sender, { message: text });
     } catch {
       try {
-        console.log('caching from getDialogs...');
-        await client.getDialogs();
+        console.log('error! caching from getParticipants...');
+        await client.getParticipants(chat);
         await client.sendMessage(sender, { message: text });
       } catch {
         try {
-          console.log('error! caching from getParticipants...');
-          await client.getParticipants(chat);
+          console.log('caching from getDialogs...');
+          await client.getDialogs();
           await client.sendMessage(sender, { message: text });
         } catch (e: any) {
           const senderName = this.getSenderName(sender);
