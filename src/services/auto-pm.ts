@@ -1,4 +1,4 @@
-import { Api } from 'telegram';
+import { Api, TelegramClient } from 'telegram';
 import { NewMessageEvent } from 'telegram/events';
 import { Entity } from 'telegram/define';
 import { getDisplayName } from 'telegram/Utils';
@@ -51,6 +51,31 @@ class AutoPM {
     return senderName;
   };
 
+  private sendMessage = async (
+    client: TelegramClient,
+    chat: Entity,
+    sender: Api.User,
+    text: string
+  ) => {
+    try {
+      await client.sendMessage(sender, { message: text });
+    } catch {
+      try {
+        console.log('caching from getDialogs...');
+        await client.getDialogs();
+        await client.sendMessage(sender, { message: text });
+      } catch {
+        try {
+          console.log('error! caching from getParticipants...');
+          await client.getParticipants(chat);
+          await client.sendMessage(sender, { message: text });
+        } catch {
+          throw new Error("Can't send a direct message to the sender.");
+        }
+      }
+    }
+  };
+
   public onEvent = async (event: NewMessageEvent) => {
     const message = event.message;
     const text = message.message;
@@ -84,17 +109,7 @@ class AutoPM {
       }
       console.log('passed client check');
 
-      try {
-        await client.sendMessage(sender, { message: keyword.text });
-      } catch {
-        try {
-          await client.getDialogs();
-          await client.sendMessage(sender, { message: keyword.text });
-        } catch {
-          await client.getParticipants(chat);
-          await client.sendMessage(sender, { message: keyword.text });
-        }
-      }
+      await this.sendMessage(client, chat, sender, keyword.text);
 
       const senderName = this.getSenderName(sender);
       console.log(`An auto PM (${keyword.key}) has sent to ${senderName}.`);
