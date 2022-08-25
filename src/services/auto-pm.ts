@@ -26,7 +26,9 @@ class AutoPM {
         message.sender ? message.sender : await message.getSender()
       ) as Api.User;
 
-      if (!sender.username && !sender.phone) {
+      if (!sender.username) {
+        console.log("sender doesn't have username. getting it...");
+
         const client = message.client as TelegramClient;
         await client.getDialogs();
 
@@ -37,13 +39,14 @@ class AutoPM {
             break;
           }
         }
+
+        console.log(`done! sender username is ${sender.username}`);
       }
 
       return sender;
     } catch (e) {
       throw e;
     }
-    return undefined;
   };
 
   private getSenderName = (sender: Api.User) => {
@@ -66,12 +69,7 @@ class AutoPM {
     text: string
   ) => {
     try {
-      const senderEntityLike = sender.username
-        ? sender.username
-        : sender.phone
-        ? sender.phone
-        : sender;
-      await client.sendMessage(senderEntityLike, { message: text });
+      await client.sendMessage(sender.username ?? sender, { message: text });
     } catch (e: any) {
       const senderName = this.getSenderName(sender);
       const errMessage = e.any ?? '';
