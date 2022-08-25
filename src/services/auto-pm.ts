@@ -3,8 +3,11 @@ import { NewMessageEvent } from 'telegram/events';
 import { Entity } from 'telegram/define';
 import { getDisplayName } from 'telegram/Utils';
 import keywords from '@/config/auto-pm-keywords.json';
+import { TotalList } from 'telegram/Helpers';
 
 class AutoPM {
+  private seenUsers: TotalList<Api.User> = [];
+
   private hasKeyword = (text: string) => {
     for (const [keyword, message] of Object.entries(keywords)) {
       if (text.match(keyword)) {
@@ -17,27 +20,25 @@ class AutoPM {
     return undefined;
   };
 
-  private getSender = async (
-    message: Api.Message,
-    chat: Entity,
-    forceGetParticipants?: boolean
-  ) => {
-    if (forceGetParticipants == undefined) {
-      forceGetParticipants = false;
-    }
-
+  private getSender = async (message: Api.Message, chat: Entity) => {
     try {
       let sender = (
         message.sender ? message.sender : await message.getSender()
       ) as Api.User;
-      if (!sender || forceGetParticipants) {
-        const client = message.client;
-        await client?.getParticipants(chat);
 
-        sender = (
-          message.sender ? message.sender : await message.getSender()
-        ) as Api.User;
+      if (!sender.username && !sender.phone) {
+        const client = message.client as TelegramClient;
+        await client.getDialogs();
+
+        const participants = await client.getParticipants(chat);
+        for (const participant of participants) {
+          if (participant.id === sender.id) {
+            sender = participant;
+            break;
+          }
+        }
       }
+
       return sender;
     } catch (e) {
       throw e;
@@ -60,35 +61,24 @@ class AutoPM {
   };
 
   private sendMessage = async (
-    message: Api.Message,
     client: TelegramClient,
-    chat: Entity,
     sender: Api.User,
     text: string
   ) => {
     try {
-      await client.sendMessage(sender, { message: text });
-    } catch {
-      try {
-        console.log('error! caching from getParticipants...');
-        sender = (await this.getSender(message, chat, true)) as Api.User;
-        await client.sendMessage(sender, { message: text });
-      } catch {
-        try {
-          console.log('error! caching from getDialogs...');
-          await client.getDialogs();
+      const senderEntityLike = sender.username
+        ? sender.username
+        : sender.phone
+        ? sender.phone
+        : sender;
+      await client.sendMessage(senderEntityLike, { message: text });
+    } catch (e: any) {
+      const senderName = this.getSenderName(sender);
+      const errMessage = e.any ?? '';
 
-          sender = (await message.getSender()) as Api.User;
-          await client.sendMessage(sender, { message: text });
-        } catch (e: any) {
-          const senderName = this.getSenderName(sender);
-          let errMessage = e.message ? (e.message as string) : '';
-
-          throw new Error(
-            `Can't send a direct message to sender: ${senderName}.\n${errMessage}`
-          );
-        }
-      }
+      throw new Error(
+        `Can't send a direct message to sender: ${senderName}.\n${errMessage}`
+      );
     }
     return sender;
   };
@@ -126,13 +116,7 @@ class AutoPM {
       }
       console.log('passed client check');
 
-      sender = await this.sendMessage(
-        message,
-        client,
-        chat,
-        sender,
-        keyword.text
-      );
+      sender = await this.sendMessage(client, sender, keyword.text);
 
       const senderName = this.getSenderName(sender);
       console.log(`An auto PM (${keyword.key}) has sent to ${senderName}.`);
