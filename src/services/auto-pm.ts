@@ -3,11 +3,8 @@ import { NewMessageEvent } from 'telegram/events';
 import { Entity } from 'telegram/define';
 import { getDisplayName } from 'telegram/Utils';
 import keywords from '@/config/auto-pm-keywords.json';
-import { TotalList } from 'telegram/Helpers';
 
 class AutoPM {
-  private seenUsers: TotalList<Api.User> = [];
-
   private hasKeyword = (text: string) => {
     for (const [keyword, message] of Object.entries(keywords)) {
       if (text.match(keyword)) {
@@ -26,8 +23,8 @@ class AutoPM {
         message.sender ? message.sender : await message.getSender()
       ) as Api.User;
 
-      if (!sender.username) {
-        console.log("sender doesn't have username. getting it...");
+      if (!sender.username && !sender.phone) {
+        console.log("sender doesn't have username and phone. getting it...");
 
         const client = message.client as TelegramClient;
         await client.getDialogs();
@@ -40,7 +37,9 @@ class AutoPM {
           }
         }
 
-        console.log(`done! sender username is ${sender.username}`);
+        console.log(
+          `done! username is ${sender.username}, and phone number is ${sender.phone}.`
+        );
       }
 
       return sender;
@@ -69,7 +68,10 @@ class AutoPM {
     text: string
   ) => {
     try {
-      await client.sendMessage(sender.username ?? sender, { message: text });
+      const inputSender = await client.getInputEntity(
+        sender.username ?? sender.id
+      );
+      await client.sendMessage(inputSender, { message: text });
     } catch (e: any) {
       const senderName = this.getSenderName(sender);
       const errMessage = e.any ?? '';
