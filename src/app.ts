@@ -5,6 +5,8 @@ import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { prompt } from '@/helpers/prompt';
 
+import Users from '@/models/Users';
+
 import { NewMessage } from 'telegram/events';
 import { newMessageHandler } from './events/new-message-event';
 
@@ -18,8 +20,8 @@ const stringSession = new StringSession(session);
 const client = new TelegramClient(stringSession, apiId, apiHash, {});
 
 (async () => {
-  console.log('Logging into Telegram App account...');
   try {
+    console.log('Logging into Telegram App account...');
     await client.start({
       phoneNumber: async () => {
         if (!phoneNumber) {
