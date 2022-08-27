@@ -65,22 +65,26 @@ class AutoPM {
 
   private senderHasAccess = async (sender: Api.User) => {
     try {
-      if (sender.username || sender.phone) {
-        const identifier = sender.username ?? (sender.phone as string).slice(0);
-        const user = await users.get(identifier);
+      const allUsers = await users.getAll();
 
-        if (!user) {
-          return true;
+      for (const user of allUsers) {
+        if (sender.username && user.identifier === sender.username) {
+          if (user.keywords_permitted === 'FALSE') {
+            return false;
+          }
         }
 
-        if (user.keywords_permitted === 'FALSE') {
-          return false;
+        if (sender.phone && user.identifier === sender.phone) {
+          if (user.keywords_permitted === 'FALSE') {
+            return false;
+          }
         }
       }
+
+      return true;
     } catch (error) {
       throw error;
     }
-    return true;
   };
 
   public onEvent = async (event: NewMessageEvent) => {
