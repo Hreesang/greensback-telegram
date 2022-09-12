@@ -5,8 +5,6 @@ import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
 import { prompt } from '@/helpers/prompt';
 
-import Users from '@/models/Users';
-
 import { NewMessage } from 'telegram/events';
 import { newMessageHandler } from './events/new-message-event';
 
@@ -44,7 +42,7 @@ const client = new TelegramClient(stringSession, apiId, apiHash, {});
       },
     });
 
-    console.log('You should now be connected!');
+    console.log('You are now connected!');
     await client.getDialogs();
 
     const generatedSession = `${client.session.save()}`;
